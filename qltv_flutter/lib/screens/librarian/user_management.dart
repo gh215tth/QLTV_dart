@@ -1,5 +1,8 @@
+// screens/user_management.dart
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
+import 'add_user_page.dart';
+import 'edit_user_page.dart';
+import '../../services/api_service.dart';
 
 class UserManagementPage extends StatefulWidget {
   const UserManagementPage({super.key});
@@ -69,16 +72,41 @@ class _UserManagementPageState extends State<UserManagementPage> {
                         leading: const Icon(Icons.person),
                         title: Text(user['username'] ?? ''),
                         subtitle: Text(user['email'] ?? ''),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () => _deleteUser(user['id'] as int),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit),
+                              onPressed: () async {
+                                final updated = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => EditUserPage(user: user)),
+                                );
+                                if (updated == true) setState(() => _loadUsers());
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete),
+                              onPressed: () => _deleteUser(user['id'] as int),
+                            ),
+                          ],
                         ),
                       ),
+                      
                     );
                   },
                 ),
-          // Nếu chưa có AddUserPage, có thể ẩn hoặc disable nút này
-          floatingActionButton: null,
+          // ở cuối UserManagementPage build:
+          floatingActionButton: FloatingActionButton(
+            child: const Icon(Icons.add),
+            onPressed: () async {
+              final created = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AddUserPage()),
+              );
+              if (created == true) setState(() => _loadUsers());
+            },
+          ),
         );
       },
     );

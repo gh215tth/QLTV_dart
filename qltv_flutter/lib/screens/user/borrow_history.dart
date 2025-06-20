@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
+import 'package:intl/intl.dart';
+import '../../services/api_service.dart';
 
 class BorrowHistoryPage extends StatefulWidget {
   const BorrowHistoryPage({super.key});
@@ -10,14 +11,11 @@ class BorrowHistoryPage extends StatefulWidget {
 
 class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
   late Future<List<Map<String, dynamic>>> _historyFuture;
+  final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
 
   @override
   void initState() {
     super.initState();
-    _loadHistory();
-  }
-
-  void _loadHistory() {
     _historyFuture = ApiService.instance.fetchLoans();
   }
 
@@ -48,15 +46,19 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
           separatorBuilder: (_, __) => const Divider(),
           itemBuilder: (context, index) {
             final item = history[index];
+            final rawDate = item['loan_date'] as String? ?? '';
+            String loanDate;
+            try {
+              loanDate = _dateFormat.format(DateTime.parse(rawDate));
+            } catch (_) {
+              loanDate = rawDate;
+            }
             return ListTile(
               title: Text(item['title'] ?? ''),
               subtitle: Text(
-                'Ngày mượn: ${item['loan_date']}\n'
+                'Ngày mượn: $loanDate\n'
                 'Trạng thái: ${item['status']}',
               ),
-              onTap: () {
-                // TODO: Chi tiết mượn / trả sách
-              },
             );
           },
         );

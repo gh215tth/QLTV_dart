@@ -1,20 +1,36 @@
-// lib/services/api_service.dart
-
+// services/api_service.dart
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:device_info_plus/device_info_plus.dart';
 
 class ApiService {
   ApiService._();
   static final instance = ApiService._();
 
   final _storage = const FlutterSecureStorage();
+  final _deviceInfo = DeviceInfoPlugin();
 
-  /// Dynamic host for Android emulator vs others
-  String get _baseUrl {
-    final host = Platform.isAndroid ? '10.0.2.2' : 'localhost';
-    return 'http://$host:3000/api';
+  /// Determine base URL based on emulator vs real device
+  Future<String> get _baseUrl async {
+    bool isEmulator = false;
+    try {
+      if (Platform.isAndroid) {
+        final androidInfo = await _deviceInfo.androidInfo;
+        isEmulator = !androidInfo.isPhysicalDevice;
+      } else if (Platform.isIOS) {
+        final iosInfo = await _deviceInfo.iosInfo;
+        isEmulator = !iosInfo.isPhysicalDevice;
+      }
+    } catch (_) {
+      isEmulator = false;
+    }
+
+    if (Platform.isAndroid && isEmulator) {
+      return 'http://10.0.2.2:3000/api';
+    }
+    return 'http://192.168.5.100:3000/api';
   }
 
   /// Common headers; add Authorization when needed
@@ -29,27 +45,20 @@ class ApiService {
 
   /// ---------------- Authentication ----------------
 
-  /// Login and store JWT token
   Future<Map<String, dynamic>> login(String username, String password) async {
-    final url = Uri.parse('$_baseUrl/auth/login');
-    late http.Response resp;
-    try {
-      resp = await http
-          .post(
-            url,
-            headers: await _headers(),
-            body: jsonEncode({'username': username, 'password': password}),
-          )
-          .timeout(const Duration(seconds: 10));
-    } on SocketException {
-      throw Exception('Không thể kết nối tới máy chủ.');
-    }
-
+    final baseUrl = await _baseUrl;
+    final url = Uri.parse('$baseUrl/users/login');
+    final resp = await http.post(
+      url,
+      headers: await _headers(),
+      body: jsonEncode({'username': username, 'password': password}),
+    );
     if (resp.statusCode == 200) {
       final body = jsonDecode(resp.body) as Map<String, dynamic>;
-      final token = body['token'] as String?; // Đổi từ 'accessToken' thành 'token'
+      final token = body['accessToken'] as String?;
       if (token == null) throw Exception('Phản hồi không hợp lệ từ server.');
       await _storage.write(key: 'ACCESS_TOKEN', value: token);
+      await _storage.write(key: 'LOGGED_IN_USER', value: jsonEncode(body['user']));
       return body['user'] as Map<String, dynamic>;
     } else if (resp.statusCode == 401) {
       throw Exception('Tên đăng nhập hoặc mật khẩu không đúng.');
@@ -58,15 +67,44 @@ class ApiService {
     }
   }
 
-  /// Remove JWT token
-  Future<void> logout() async {
-    await _storage.delete(key: 'ACCESS_TOKEN');
+  Future<Map<String, dynamic>> loginLibrarian(String username, String password) async {
+    final baseUrl = await _baseUrl;
+    final url = Uri.parse('$baseUrl/librarians/login');
+    final resp = await http.post(
+      url,
+      headers: await _headers(),
+      body: jsonEncode({'username': username, 'password': password}),
+    );
+    if (resp.statusCode == 200) {
+      final body = jsonDecode(resp.body) as Map<String, dynamic>;
+      final token = body['accessToken'] as String?;
+      if (token == null) throw Exception('Phản hồi không hợp lệ từ server.');
+      await _storage.write(key: 'ACCESS_TOKEN', value: token);
+      await _storage.write(key: 'LOGGED_IN_USER', value: jsonEncode(body['librarian']));
+      return body['librarian'] as Map<String, dynamic>;
+    } else if (resp.statusCode == 401) {
+      throw Exception('Tên đăng nhập hoặc mật khẩu không đúng.');
+    } else {
+      throw Exception('Lỗi server (${resp.statusCode}).');
+    }
   }
 
-  /// ---------------- Users CRUD ----------------
+  Future<String?> getToken() async => await _storage.read(key: 'ACCESS_TOKEN');
+
+  Future<Map<String, dynamic>> getCurrentUser() async {
+    final jsonString = await _storage.read(key: 'LOGGED_IN_USER');
+    if (jsonString == null) throw Exception('Không tìm thấy thông tin người dùng');
+    return jsonDecode(jsonString) as Map<String, dynamic>;
+  }
+
+  Future<void> logout() async {
+    await _storage.delete(key: 'ACCESS_TOKEN');
+    await _storage.delete(key: 'LOGGED_IN_USER');
+  }
 
   Future<List<Map<String, dynamic>>> fetchUsers() async {
-    final url = Uri.parse('$_baseUrl/users');
+    final baseUrl = await _baseUrl;
+    final url = Uri.parse('$baseUrl/users');
     final resp = await http.get(url, headers: await _headers(auth: true));
     if (resp.statusCode == 200) {
       return List<Map<String, dynamic>>.from(jsonDecode(resp.body));
@@ -76,31 +114,47 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> createUser(Map<String, dynamic> user) async {
-    final url = Uri.parse('$_baseUrl/users');
+    final baseUrl = await _baseUrl;
+    final url = Uri.parse('$baseUrl/users');
     final resp = await http.post(
       url,
       headers: await _headers(auth: true),
       body: jsonEncode(user),
     );
-    if (resp.statusCode == 201 || resp.statusCode == 200) {
+    if (resp.statusCode == 200 || resp.statusCode == 201) {
       return jsonDecode(resp.body) as Map<String, dynamic>;
     } else {
       throw Exception('Không tạo được người dùng (${resp.statusCode}).');
     }
   }
 
+  Future<Map<String, dynamic>> updateUser(int id, Map<String, dynamic> data) async {
+    final baseUrl = await _baseUrl;
+    final url = Uri.parse('$baseUrl/users/$id');
+    final resp = await http.put(
+      url,
+      headers: await _headers(auth: true),
+      body: jsonEncode(data),
+    );
+    if (resp.statusCode == 200) {
+      return jsonDecode(resp.body) as Map<String, dynamic>;
+    } else {
+      throw Exception('Không cập nhật được người dùng (${resp.statusCode}).');
+    }
+  }
+
   Future<void> deleteUser(int id) async {
-    final url = Uri.parse('$_baseUrl/users/$id');
+    final baseUrl = await _baseUrl;
+    final url = Uri.parse('$baseUrl/users/$id');
     final resp = await http.delete(url, headers: await _headers(auth: true));
-    if (resp.statusCode != 200) {
+    if (resp.statusCode != 200 && resp.statusCode != 204) {
       throw Exception('Không xóa được người dùng (${resp.statusCode}).');
     }
   }
 
-  /// ---------------- Books CRUD ----------------
-
   Future<List<Map<String, dynamic>>> fetchBooks() async {
-    final url = Uri.parse('$_baseUrl/books');
+    final baseUrl = await _baseUrl;
+    final url = Uri.parse('$baseUrl/books');
     final resp = await http.get(url, headers: await _headers(auth: true));
     if (resp.statusCode == 200) {
       return List<Map<String, dynamic>>.from(jsonDecode(resp.body));
@@ -110,13 +164,14 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> createBook(Map<String, dynamic> book) async {
-    final url = Uri.parse('$_baseUrl/books');
+    final baseUrl = await _baseUrl;
+    final url = Uri.parse('$baseUrl/books');
     final resp = await http.post(
       url,
       headers: await _headers(auth: true),
       body: jsonEncode(book),
     );
-    if (resp.statusCode == 201 || resp.statusCode == 200) {
+    if (resp.statusCode == 200 || resp.statusCode == 201) {
       return jsonDecode(resp.body) as Map<String, dynamic>;
     } else {
       throw Exception('Không tạo được sách (${resp.statusCode}).');
@@ -124,7 +179,8 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> updateBook(int id, Map<String, dynamic> book) async {
-    final url = Uri.parse('$_baseUrl/books/$id');
+    final baseUrl = await _baseUrl;
+    final url = Uri.parse('$baseUrl/books/$id');
     final resp = await http.put(
       url,
       headers: await _headers(auth: true),
@@ -138,17 +194,17 @@ class ApiService {
   }
 
   Future<void> deleteBook(int id) async {
-    final url = Uri.parse('$_baseUrl/books/$id');
+    final baseUrl = await _baseUrl;
+    final url = Uri.parse('$baseUrl/books/$id');
     final resp = await http.delete(url, headers: await _headers(auth: true));
     if (resp.statusCode != 200) {
       throw Exception('Không xóa được sách (${resp.statusCode}).');
     }
   }
 
-  /// ---------------- Loans CRUD ----------------
-
   Future<List<Map<String, dynamic>>> fetchLoans() async {
-    final url = Uri.parse('$_baseUrl/loans');
+    final baseUrl = await _baseUrl;
+    final url = Uri.parse('$baseUrl/loans');
     final resp = await http.get(url, headers: await _headers(auth: true));
     if (resp.statusCode == 200) {
       return List<Map<String, dynamic>>.from(jsonDecode(resp.body));
@@ -158,7 +214,8 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> createLoan(Map<String, dynamic> loanRequest) async {
-    final url = Uri.parse('$_baseUrl/loans');
+    final baseUrl = await _baseUrl;
+    final url = Uri.parse('$baseUrl/loans');
     final resp = await http.post(
       url,
       headers: await _headers(auth: true),
@@ -172,12 +229,75 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> returnLoan(int loanId) async {
-    final url = Uri.parse('$_baseUrl/loans/$loanId/return');
+    final baseUrl = await _baseUrl;
+    final url = Uri.parse('$baseUrl/loans/$loanId/return');
     final resp = await http.post(url, headers: await _headers(auth: true));
     if (resp.statusCode == 200) {
       return jsonDecode(resp.body) as Map<String, dynamic>;
     } else {
       throw Exception('Không trả được sách (${resp.statusCode}).');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchLibrarians() async {
+    final baseUrl = await _baseUrl;
+    final url = Uri.parse('$baseUrl/librarians');
+    final resp = await http.get(url, headers: await _headers(auth: true));
+    if (resp.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(jsonDecode(resp.body));
+    } else {
+      throw Exception('Không tải được danh sách thủ thư.');
+    }
+  }
+
+  Future<Map<String, dynamic>> createLibrarian(Map<String, dynamic> data) async {
+    final baseUrl = await _baseUrl;
+    final url = Uri.parse('$baseUrl/librarians');
+    final resp = await http.post(
+      url,
+      headers: await _headers(auth: true),
+      body: jsonEncode(data),
+    );
+    if (resp.statusCode == 201) {
+      return jsonDecode(resp.body) as Map<String, dynamic>;
+    } else {
+      throw Exception('Không tạo được thủ thư (${resp.statusCode}).');
+    }
+  }
+
+  /// Cập nhật thủ thư (PUT /api/librarians/{id})
+  Future<Map<String, dynamic>> updateLibrarian(int id, Map<String, dynamic> data) async {
+    final baseUrl = await _baseUrl;
+    final url = Uri.parse('$baseUrl/librarians/$id');
+    final resp = await http.put(
+      url,
+      headers: await _headers(auth: true),
+      body: jsonEncode(data),
+    );
+    if (resp.statusCode == 200) {
+      return jsonDecode(resp.body) as Map<String, dynamic>;
+    } else {
+      throw Exception('Không cập nhật được thủ thư (${resp.statusCode}).');
+    }
+  }
+
+  Future<void> deleteLibrarian(int id) async {
+    final baseUrl = await _baseUrl;
+    final url = Uri.parse('$baseUrl/librarians/$id');
+    final resp = await http.delete(url, headers: await _headers(auth: true));
+    if (resp.statusCode != 200 && resp.statusCode != 204) {
+      throw Exception('Không xóa được thủ thư (${resp.statusCode}).');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchCategories() async {
+    final baseUrl = await _baseUrl;
+    final url = Uri.parse('$baseUrl/categories');
+    final resp = await http.get(url, headers: await _headers(auth: true));
+    if (resp.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(jsonDecode(resp.body));
+    } else {
+      throw Exception('Không tải được danh mục.');
     }
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'screens/login_screen.dart';
-import 'screens/librarian_home.dart' as librarian;
-import 'screens/user_home.dart';
+import 'screens/login/login_screen.dart';
+import 'screens/librarian/librarian_home.dart' as librarian;
+import 'screens/user/user_home.dart';
 
 void main() {
   runApp(const MyApp());
@@ -14,28 +14,17 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Quản lý Thư viện',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        useMaterial3: true,
       ),
       initialRoute: '/',
       routes: {
-        '/': (c) => const LoginScreen(),
-        '/userHome': (c) => const UserHome(),
-        '/librarianHome': (c) => const librarian.LibrarianHome(),
+        '/': (context) => const LoginScreen(),
+        '/userHome': (context) => const UserHome(),
+        '/librarianHome': (context) => const librarian.LibrarianHome(),
       },
-    );
-  }
-}
-
-class MyHomePage extends StatelessWidget {
-  final String title;
-  const MyHomePage({super.key, required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(child: Text('Chào mừng đến $title!')),
     );
   }
 }
