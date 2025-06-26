@@ -1,7 +1,8 @@
+// screens/librarian/librarian_home.dart
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import 'user_management.dart';
-import 'book_management.dart';
+import 'category_management.dart';
 import 'librarian_management.dart';
 import '../common/search_page.dart';
 
@@ -16,11 +17,11 @@ class _LibrarianHomeState extends State<LibrarianHome> {
   int _currentIndex = 0;
   String? _username;
 
-  final List<Widget> _pages = const [
-    UserManagementPage(),
-    BookManagementPage(),
-    LibrarianManagementPage(),
-    SearchPage(),
+  final List<Widget> _pages = [
+    const UserManagementPage(),
+    const CategoryManagementPage(),
+    const LibrarianManagementPage(),
+    const SearchPage(),
   ];
 
   @override
@@ -30,40 +31,43 @@ class _LibrarianHomeState extends State<LibrarianHome> {
   }
 
   Future<void> _loadLibrarianInfo() async {
-    final token = await ApiService.instance.getToken();
-    if (token != null) {
-      final user = await ApiService.instance.getCurrentUser();
-      if (mounted) {
-        setState(() {
-          _username = user['username'];
-        });
+    try {
+      final token = await ApiService.instance.getToken();
+      if (token != null) {
+        final user = await ApiService.instance.getCurrentUser();
+        if (!mounted) return;
+        setState(() => _username = user['username']);
       }
+    } catch (e) {
+      debugPrint('Lỗi khi lấy thông tin thủ thư: $e');
     }
+  }
+
+  void _onLogout() async {
+    await ApiService.instance.logout();
+    if (!mounted) return;
+    Navigator.pushReplacementNamed(context, '/');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_username != null ? 'Thủ thư: $_username' : 'Librarian Home'),
+        title: Text(_username != null ? 'Thủ thư: $_username' : 'Trang thủ thư'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await ApiService.instance.logout();
-              if (context.mounted) {
-                Navigator.pushReplacementNamed(context, '/');
-              }
-            },
+            tooltip: 'Đăng xuất',
+            onPressed: _onLogout,
           ),
         ],
       ),
       body: _pages[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
-        unselectedItemColor: Colors.grey,
-        selectedItemColor: Colors.blue,
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
+        unselectedItemColor: Colors.grey,
+        selectedItemColor: Colors.blue,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.group), label: 'Người dùng'),
           BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Sách'),
@@ -74,3 +78,4 @@ class _LibrarianHomeState extends State<LibrarianHome> {
     );
   }
 }
+

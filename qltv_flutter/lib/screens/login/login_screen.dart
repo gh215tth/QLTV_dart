@@ -13,25 +13,32 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   String _errorMessage = '';
   bool _isLoading = false;
+  bool _obscurePassword = true;
   String _selectedRole = 'user'; // default
 
   Future<void> _login() async {
+    final username = _usernameController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (username.isEmpty || password.isEmpty) {
+      setState(() {
+        _errorMessage = 'Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu.';
+      });
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = '';
     });
 
     try {
-      final username = _usernameController.text.trim();
-      final password = _passwordController.text.trim();
-
       final user = _selectedRole == 'librarian'
           ? await ApiService.instance.loginLibrarian(username, password)
           : await ApiService.instance.login(username, password);
 
       if (!mounted) return;
 
-      // ✅ Sử dụng user để tránh cảnh báo unused
       debugPrint('Đăng nhập thành công với user: ${user['username']}');
 
       final route = _selectedRole == 'librarian' ? '/librarianHome' : '/userHome';
@@ -49,6 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     }
   }
+
 
 
   @override
@@ -106,6 +114,11 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 24),
             TextField(
               controller: _usernameController,
+              onChanged: (_) {
+                if (_errorMessage.isNotEmpty) {
+                  setState(() => _errorMessage = '');
+                }
+              },
               decoration: const InputDecoration(
                 labelText: 'Tên đăng nhập',
                 border: OutlineInputBorder(),
@@ -114,10 +127,25 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 16),
             TextField(
               controller: _passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
+              onChanged: (_) {
+                if (_errorMessage.isNotEmpty) {
+                  setState(() => _errorMessage = '');
+                }
+              },
+              obscureText: _obscurePassword,
+              decoration: InputDecoration(
                 labelText: 'Mật khẩu',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _obscurePassword = !_obscurePassword;
+                    });
+                  },
+                ),
               ),
             ),
             const SizedBox(height: 24),

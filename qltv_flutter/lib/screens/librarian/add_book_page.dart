@@ -13,28 +13,67 @@ class _AddBookPageState extends State<AddBookPage> {
   final _titleController = TextEditingController();
   final _authorController = TextEditingController();
 
+  int? _selectedCategoryId;
   bool _isLoading = false;
-  String? _error;
+  List<Map<String, dynamic>> _categories = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCategories();
+  }
+
+  Future<void> _fetchCategories() async {
+    try {
+      final categories = await ApiService.instance.fetchCategories();
+      if (mounted) {
+        setState(() {
+          _categories = categories;
+          if (_categories.isNotEmpty) {
+            _selectedCategoryId ??= _categories.first['id'];
+          }
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi tải danh mục: $e')),
+      );
+    }
+  }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_selectedCategoryId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng chọn danh mục')),
+      );
+      return;
+    }
 
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+    setState(() => _isLoading = true);
 
     try {
       await ApiService.instance.createBook({
         'title': _titleController.text.trim(),
         'author': _authorController.text.trim(),
+        'category_id': _selectedCategoryId,
+        'status': 0, // mặc định là "chưa mượn"
       });
+
       if (!mounted) return;
-      Navigator.pop(context, true); // ← báo về rằng đã thêm
+      Navigator.pop(context, true);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Thêm sách thành công')),
+      );
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi: $e')),
+      );
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -58,16 +97,27 @@ class _AddBookPageState extends State<AddBookPage> {
               TextFormField(
                 controller: _titleController,
                 decoration: const InputDecoration(labelText: 'Tên sách'),
-                validator: (value) => value!.isEmpty ? 'Vui lòng nhập tên sách' : null,
+                validator: (value) =>
+                    value == null || value.trim().isEmpty ? 'Vui lòng nhập tên sách' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _authorController,
                 decoration: const InputDecoration(labelText: 'Tác giả'),
               ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<int>(
+                decoration: const InputDecoration(labelText: 'Danh mục'),
+                value: _selectedCategoryId,
+                items: _categories
+                    .map((cat) => DropdownMenuItem<int>(
+                          value: cat['id'],
+                          child: Text(cat['name']),
+                        ))
+                    .toList(),
+                onChanged: (value) => setState(() => _selectedCategoryId = value),
+              ),
               const SizedBox(height: 24),
-              if (_error != null)
-                Text(_error!, style: const TextStyle(color: Colors.red)),
               _isLoading
                   ? const CircularProgressIndicator()
                   : ElevatedButton(

@@ -23,9 +23,18 @@ class _EditLibrarianPageState extends State<EditLibrarianPage> {
     _emailCtrl = TextEditingController(text: widget.librarian['email']);
   }
 
+  @override
+  void dispose() {
+    _usernameCtrl.dispose();
+    _emailCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
     setState(() => _isLoading = true);
+
     try {
       await ApiService.instance.updateLibrarian(
         widget.librarian['id'] as int,
@@ -34,14 +43,22 @@ class _EditLibrarianPageState extends State<EditLibrarianPage> {
           'email': _emailCtrl.text.trim(),
         },
       );
+
       if (!mounted) return;
-      Navigator.pop(context, true);
+
+      if (context.mounted) {
+        Navigator.pop(context, true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cập nhật thủ thư thành công')),
+        );
+      }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Lỗi: $e')),
       );
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -53,26 +70,33 @@ class _EditLibrarianPageState extends State<EditLibrarianPage> {
         padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
-          child: Column(children: [
-            TextFormField(
-              controller: _usernameCtrl,
-              decoration: const InputDecoration(labelText: 'Username'),
-              validator: (v) => v!.isEmpty ? 'Nhập username' : null,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _emailCtrl,
-              decoration: const InputDecoration(labelText: 'Email'),
-              validator: (v) => v!.contains('@') ? null : 'Email không hợp lệ',
-            ),
-            const SizedBox(height: 24),
-            _isLoading
-                ? const CircularProgressIndicator()
-                : ElevatedButton(
-                    onPressed: _submit,
-                    child: const Text('Lưu'),
-                  ),
-          ]),
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _usernameCtrl,
+                decoration: const InputDecoration(labelText: 'Tên đăng nhập'),
+                validator: (v) =>
+                    v == null || v.trim().isEmpty ? 'Vui lòng nhập tên' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _emailCtrl,
+                decoration: const InputDecoration(labelText: 'Email'),
+                validator: (v) =>
+                    v != null && v.contains('@') ? null : 'Email không hợp lệ',
+              ),
+              const SizedBox(height: 24),
+              _isLoading
+                  ? const CircularProgressIndicator()
+                  : SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _submit,
+                        child: const Text('Lưu'),
+                      ),
+                    ),
+            ],
+          ),
         ),
       ),
     );

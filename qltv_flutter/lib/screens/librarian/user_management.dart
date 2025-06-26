@@ -1,4 +1,4 @@
-// screens/user_management.dart
+// screens/librarian/user_management.dart
 import 'package:flutter/material.dart';
 import 'add_user_page.dart';
 import 'edit_user_page.dart';
@@ -59,6 +59,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
         }
         final users = snapshot.data!;
         return Scaffold(
+          appBar: AppBar(title: const Text('Quản lý người dùng')),
           body: users.isEmpty
               ? const Center(child: Text('Chưa có người dùng nào.'))
               : ListView.separated(
@@ -78,32 +79,59 @@ class _UserManagementPageState extends State<UserManagementPage> {
                             IconButton(
                               icon: const Icon(Icons.edit),
                               onPressed: () async {
+                                final localContext = context;
                                 final updated = await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (_) => EditUserPage(user: user)),
+                                  localContext,
+                                  MaterialPageRoute(
+                                    builder: (_) => EditUserPage(user: user),
+                                  ),
                                 );
-                                if (updated == true) setState(() => _loadUsers());
+                                if (!mounted) return;
+                                if (updated == true) {
+                                  setState(() => _loadUsers());
+                                }
                               },
                             ),
                             IconButton(
                               icon: const Icon(Icons.delete),
-                              onPressed: () => _deleteUser(user['id'] as int),
+                              onPressed: () async {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: const Text('Xác nhận'),
+                                    content: const Text('Bạn có chắc muốn xóa người dùng này?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(ctx, false),
+                                        child: const Text('Hủy'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(ctx, true),
+                                        child: const Text('Xóa'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirm == true) {
+                                  await _deleteUser(user['id'] as int);
+                                }
+                              },
                             ),
                           ],
                         ),
                       ),
-                      
                     );
                   },
                 ),
-          // ở cuối UserManagementPage build:
           floatingActionButton: FloatingActionButton(
             child: const Icon(Icons.add),
             onPressed: () async {
+              final localContext = context;
               final created = await Navigator.push(
-                context,
+                localContext,
                 MaterialPageRoute(builder: (_) => const AddUserPage()),
               );
+              if (!mounted) return;
               if (created == true) setState(() => _loadUsers());
             },
           ),

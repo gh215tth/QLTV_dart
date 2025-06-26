@@ -1,3 +1,4 @@
+// screens/librarian/edit_book_page.dart
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 
@@ -15,14 +16,36 @@ class _EditBookPageState extends State<EditBookPage> {
   late final TextEditingController _titleController;
   late final TextEditingController _authorController;
 
+  int? _selectedCategoryId;
+  int _selectedStatus = 0;
   bool _isLoading = false;
   String? _error;
+  List<Map<String, dynamic>> _categories = [];
 
   @override
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.book['title']);
     _authorController = TextEditingController(text: widget.book['author']);
+    _selectedCategoryId = widget.book['category_id'];
+    _selectedStatus = widget.book['status'] ?? 0;
+    _fetchCategories();
+  }
+
+  Future<void> _fetchCategories() async {
+    try {
+      final categories = await ApiService.instance.fetchCategories();
+      if (mounted) {
+        setState(() {
+          _categories = categories;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi tải danh mục: $e')),
+      );
+    }
   }
 
   Future<void> _submit() async {
@@ -37,13 +60,17 @@ class _EditBookPageState extends State<EditBookPage> {
       await ApiService.instance.updateBook(widget.book['id'], {
         'title': _titleController.text.trim(),
         'author': _authorController.text.trim(),
+        'category_id': _selectedCategoryId,
+        'status': _selectedStatus,
       });
+
       if (!mounted) return;
-      Navigator.pop(context, true); // ← báo về rằng đã sửa
+      Navigator.pop(context, true);
     } catch (e) {
+      if (!mounted) return;
       setState(() => _error = e.toString());
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -67,12 +94,34 @@ class _EditBookPageState extends State<EditBookPage> {
               TextFormField(
                 controller: _titleController,
                 decoration: const InputDecoration(labelText: 'Tên sách'),
-                validator: (value) => value!.isEmpty ? 'Vui lòng nhập tên sách' : null,
+                validator: (value) => value!.trim().isEmpty ? 'Vui lòng nhập tên sách' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _authorController,
                 decoration: const InputDecoration(labelText: 'Tác giả'),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<int>(
+                value: _selectedCategoryId,
+                decoration: const InputDecoration(labelText: 'Danh mục'),
+                items: _categories
+                    .map<DropdownMenuItem<int>>((cat) => DropdownMenuItem<int>(
+                          value: cat['id'] as int,
+                          child: Text(cat['name'] ?? ''),
+                        ))
+                    .toList(),
+                onChanged: (value) => setState(() => _selectedCategoryId = value),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<int>(
+                value: _selectedStatus,
+                decoration: const InputDecoration(labelText: 'Trạng thái'),
+                items: const [
+                  DropdownMenuItem(value: 0, child: Text('Còn sách')),
+                  DropdownMenuItem(value: 1, child: Text('Đã mượn')),
+                ],
+                onChanged: (value) => setState(() => _selectedStatus = value!),
               ),
               const SizedBox(height: 24),
               if (_error != null)

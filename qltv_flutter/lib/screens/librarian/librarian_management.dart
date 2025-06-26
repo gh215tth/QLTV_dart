@@ -1,3 +1,4 @@
+// screens/librarian/librarian_management.dart
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import 'add_librarian_page.dart';
@@ -34,7 +35,7 @@ class _LibrarianManagementPageState extends State<LibrarianManagementPage> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi khi xóa: \$e')),
+        SnackBar(content: Text('Lỗi khi xóa: $e')),
       );
     }
   }
@@ -52,7 +53,7 @@ class _LibrarianManagementPageState extends State<LibrarianManagementPage> {
           if (snapshot.hasError) {
             return Center(
               child: Text(
-                'Lỗi khi tải thủ thư:\n\${snapshot.error}',
+                'Lỗi khi tải thủ thư:\n${snapshot.error}',
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.red),
               ),
@@ -79,18 +80,41 @@ class _LibrarianManagementPageState extends State<LibrarianManagementPage> {
                       IconButton(
                         icon: const Icon(Icons.edit),
                         onPressed: () async {
+                          final localContext = context;
                           final updated = await Navigator.push(
-                            context,
+                            localContext,
                             MaterialPageRoute(
                               builder: (_) => EditLibrarianPage(librarian: librarian),
                             ),
                           );
+                          if (!mounted) return;
                           if (updated == true) setState(() => _loadLibrarians());
                         },
                       ),
                       IconButton(
                         icon: const Icon(Icons.delete),
-                        onPressed: () => _deleteLibrarian(librarian['id'] as int),
+                        onPressed: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Xác nhận'),
+                              content: const Text('Bạn có chắc muốn xóa thủ thư này?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: const Text('Hủy'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  child: const Text('Xóa'),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirm == true) {
+                            await _deleteLibrarian(librarian['id'] as int);
+                          }
+                        },
                       ),
                     ],
                   ),
@@ -103,10 +127,12 @@ class _LibrarianManagementPageState extends State<LibrarianManagementPage> {
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.add),
         onPressed: () async {
+          final localContext = context;
           final created = await Navigator.push(
-            context,
+            localContext,
             MaterialPageRoute(builder: (_) => const AddLibrarianPage()),
           );
+          if (!mounted) return;
           if (created == true) setState(() => _loadLibrarians());
         },
       ),

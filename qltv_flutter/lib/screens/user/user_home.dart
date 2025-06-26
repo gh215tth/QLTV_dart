@@ -1,3 +1,4 @@
+// screens/user/user_home.dart
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import 'category_list.dart';
@@ -29,13 +30,43 @@ class _UserHomeState extends State<UserHome> {
   }
 
   Future<void> _loadUserInfo() async {
-    final token = await ApiService.instance.getToken();
-    if (token != null) {
+    try {
       final user = await ApiService.instance.getCurrentUser();
       if (mounted) {
-        setState(() {
-          _username = user['username'];
-        });
+        setState(() => _username = user['username']);
+      }
+    } catch (_) {
+      // Không có người dùng, quay lại màn hình đăng nhập
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/');
+      }
+    }
+  }
+
+  Future<void> _handleLogout() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xác nhận đăng xuất'),
+        content: const Text('Bạn có chắc muốn đăng xuất không?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Đăng xuất'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await ApiService.instance.logout();
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/');
       }
     }
   }
@@ -48,11 +79,7 @@ class _UserHomeState extends State<UserHome> {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await ApiService.instance.logout();
-              if (!context.mounted) return;
-              Navigator.pushReplacementNamed(context, '/');
-            },
+            onPressed: _handleLogout,
           ),
         ],
       ),
