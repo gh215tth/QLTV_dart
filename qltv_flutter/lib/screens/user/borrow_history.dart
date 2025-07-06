@@ -4,7 +4,9 @@ import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
 
 class BorrowHistoryPage extends StatefulWidget {
-  const BorrowHistoryPage({super.key});
+  final VoidCallback? onReturn;
+
+  const BorrowHistoryPage({super.key, this.onReturn});
 
   @override
   State<BorrowHistoryPage> createState() => _BorrowHistoryPageState();
@@ -52,31 +54,14 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
       await ApiService.instance.returnLoan(loanId);
       if (!mounted) return;
       setState(_loadHistory);
-      if (!mounted) return;
+      widget.onReturn?.call();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Trả sách thành công')),
+        const SnackBar(content: Text('✅ Trả sách thành công')),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi khi trả sách: $e')),
-      );
-    }
-  }
-
-  Future<void> _deleteLoan(int loanId) async {
-    try {
-      await ApiService.instance.deleteLoan(loanId);
-      if (!mounted) return;
-      setState(_loadHistory);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Xóa phiếu mượn thành công')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi khi xóa: $e')),
+        SnackBar(content: Text('❌ Lỗi khi trả sách: $e')),
       );
     }
   }
@@ -87,24 +72,16 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
       appBar: AppBar(
         title: const Text('Lịch sử mượn sách'),
         actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: DropdownButton<String>(
-              value: _selectedFilter,
-              underline: const SizedBox(),
-              dropdownColor: Colors.white,
-              items: const [
-                DropdownMenuItem(value: 'Tất cả', child: Text('Tất cả')),
-                DropdownMenuItem(value: 'Đã trả', child: Text('Đã trả')),
-                DropdownMenuItem(value: 'Chưa trả', child: Text('Chưa trả')),
-              ],
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() => _selectedFilter = value);
-                }
-              },
-            ),
-          )
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.filter_list),
+            initialValue: _selectedFilter,
+            onSelected: (value) => setState(() => _selectedFilter = value),
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'Tất cả', child: Text('Tất cả')),
+              PopupMenuItem(value: 'Đã trả', child: Text('Đã trả')),
+              PopupMenuItem(value: 'Chưa trả', child: Text('Chưa trả')),
+            ],
+          ),
         ],
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
@@ -116,9 +93,8 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
           if (snapshot.hasError) {
             return Center(
               child: Text(
-                'Lỗi khi tải lịch sử:\n${snapshot.error}',
+                '❌ Lỗi khi tải lịch sử:\n${snapshot.error}',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
               ),
             );
           }
@@ -131,37 +107,54 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
           return ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: filtered.length,
-            separatorBuilder: (_, __) => const Divider(),
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final item = filtered[index];
               final loanDate = _formatDate(item['loan_date'] as String?);
               final returnDate = _formatDate(item['return_date'] as String?);
-              final status = item['return_date'] != null ? 'Đã trả' : 'Chưa trả';
+              final isReturned = item['return_date'] != null;
 
-              return ListTile(
-                leading: const Icon(Icons.book),
-                title: Text(item['title'] ?? 'Không rõ tiêu đề'),
-                subtitle: Text(
-                  'Ngày mượn: $loanDate\n'
-                  'Ngày trả: $returnDate\n'
-                  'Trạng thái: $status',
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (item['return_date'] == null)
-                      IconButton(
-                        icon: const Icon(Icons.assignment_return),
-                        tooltip: 'Trả sách',
-                        onPressed: () => _returnLoan(item['id'] as int),
-                      )
-                    else
-                      IconButton(
-                        icon: const Icon(Icons.delete_forever),
-                        tooltip: 'Xóa lịch sử',
-                        onPressed: () => _deleteLoan(item['id'] as int),
-                      )
-                  ],
+              return Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.book, color: Colors.blue),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              item['title'] ?? 'Không rõ tiêu đề',
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text('📅 Ngày mượn: $loanDate'),
+                      Text('📦 Ngày trả: $returnDate'),
+                      Text(
+                        '⏱️ Trạng thái: ${isReturned ? 'Đã trả' : 'Chưa trả'}',
+                        style: TextStyle(
+                          color: isReturned ? Colors.green : Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (!isReturned)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            icon: const Icon(Icons.assignment_return),
+                            label: const Text('Trả sách'),
+                            onPressed: () => _returnLoan(item['id'] as int),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               );
             },

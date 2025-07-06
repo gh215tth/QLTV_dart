@@ -1,6 +1,6 @@
 // screens/librarian/add_user_page.dart
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
+import '../../../services/api_service.dart';
 
 class AddUserPage extends StatefulWidget {
   const AddUserPage({super.key});
@@ -14,7 +14,6 @@ class _AddUserPageState extends State<AddUserPage> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  String _role = 'user';
   bool _isLoading = false;
 
   Future<void> _save() async {
@@ -27,7 +26,6 @@ class _AddUserPageState extends State<AddUserPage> {
         'username': _usernameController.text.trim(),
         'email': _emailController.text.trim(),
         'password': _passwordController.text,
-        'role': _role,
       });
 
       if (!mounted) return;
@@ -73,16 +71,6 @@ class _AddUserPageState extends State<AddUserPage> {
                 decoration: const InputDecoration(labelText: 'Mật khẩu'),
                 obscureText: true,
                 validator: (v) => v!.length < 6 ? 'Tối thiểu 6 ký tự' : null,
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                value: _role,
-                decoration: const InputDecoration(labelText: 'Vai trò'),
-                items: const [
-                  DropdownMenuItem(value: 'user', child: Text('Người dùng')),
-                  DropdownMenuItem(value: 'librarian', child: Text('Thủ thư')),
-                ],
-                onChanged: (v) => setState(() => _role = v!),
               ),
               const SizedBox(height: 16),
               _isLoading

@@ -53,12 +53,12 @@ exports.findByCategory = (req, res) => {
 
 // Lấy một sách theo ID
 exports.findOne = (req, res) => {
-  Book.findById(req.params.bookId, (err, data) => {
+  Book.findById(req.params.id, (err, data) => {
     if (err) {
       if (err.kind === "not_found") {
-        return res.status(404).send({ message: `Không tìm thấy sách với id ${req.params.bookId}.` });
+        return res.status(404).send({ message: `Không tìm thấy sách với id ${req.params.id}.` });
       }
-      return res.status(500).send({ message: `Lỗi khi lấy sách với id ${req.params.bookId}.` });
+      return res.status(500).send({ message: `Lỗi khi lấy sách với id ${req.params.id}.` });
     }
     res.send(data);
   });
@@ -72,15 +72,15 @@ exports.update = (req, res) => {
   }
 
   const book = { title, author, category_id, quantity };
-  Book.updateById(req.params.bookId, book, (err, data) => {
+  Book.updateById(req.params.id, book, (err, data) => {
     if (err) {
       if (err.kind === "not_found") {
-        return res.status(404).send({ message: `Không tìm thấy sách với id ${req.params.bookId}.` });
+        return res.status(404).send({ message: `Không tìm thấy sách với id ${req.params.id}.` });R
       }
       if (err.kind === "invalid_category") {
         return res.status(400).send({ message: `Danh mục với id ${category_id} không tồn tại.` });
       }
-      return res.status(500).send({ message: `Lỗi khi cập nhật sách với id ${req.params.bookId}.` });
+      return res.status(500).send({ message: `Lỗi khi cập nhật sách với id ${req.params.id}.` });
     }
     res.send(data);
   });
@@ -88,16 +88,28 @@ exports.update = (req, res) => {
 
 // Xóa sách
 exports.delete = (req, res) => {
-  Book.remove(req.params.bookId, (err, _) => {
+  Book.remove(req.params.id, (err, _) => {
     if (err) {
       if (err.kind === "not_found") {
-        return res.status(404).send({ message: `Không tìm thấy sách với id ${req.params.bookId}.` });
+        return res.status(404).send({ message: `Không tìm thấy sách với id ${req.params.id}.` });
       }
       if (err.kind === "book_in_use") {
-        return res.status(400).send({ message: `Sách với id ${req.params.bookId} đang được mượn, không thể xóa.` });
+        return res.status(400).send({ message: `Sách với id ${req.params.id} đang được mượn, không thể xóa.` });
       }
-      return res.status(500).send({ message: `Không thể xóa sách với id ${req.params.bookId}.` });
+      return res.status(500).send({ message: `Không thể xóa sách với id ${req.params.id}.` });
     }
     res.send({ message: "Xóa sách thành công!" });
+  });
+};
+
+// Lấy top sách mượn nhiều nhất
+exports.getTopBorrowed = (req, res) => {
+  const limit = parseInt(req.query.limit) || 10;
+
+  Book.getTopBorrowed(limit, (err, data) => {
+    if (err) {
+      return res.status(500).send({ message: "Không thể lấy danh sách sách mượn nhiều nhất." });
+    }
+    res.send(data);
   });
 };

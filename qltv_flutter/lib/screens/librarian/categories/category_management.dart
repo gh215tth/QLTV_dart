@@ -1,9 +1,9 @@
 // screens/librarian/category_management.dart
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
+import '../../../services/api_service.dart';
 import 'add_category_page.dart';
 import 'edit_category_page.dart';
-import 'category_books_page.dart';
+import '../books/category_books_page.dart';
 
 class CategoryManagementPage extends StatefulWidget {
   const CategoryManagementPage({super.key});

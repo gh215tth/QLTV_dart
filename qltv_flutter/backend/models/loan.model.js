@@ -35,13 +35,6 @@ Loan.findById = (id, result) => {
   );
 };
 
-Loan.getAll = result => {
-  sql.query("SELECT * FROM loan", (err, res) => {
-    if (err) return result(err, null);
-    result(null, res);
-  });
-};
-
 Loan.findAllByUser = (userId, result) => {
   // Kiểm tra user_id tồn tại
   sql.query("SELECT id FROM user WHERE id = ?", [userId], (err, res) => {
@@ -101,5 +94,49 @@ Loan.remove = (id, result) => {
   });
 };
 
+Loan.getAll = result => {
+  const query = `
+    SELECT 
+      l.id, l.loan_date, u.username,
+      CASE 
+        WHEN COUNT(li.id) = SUM(CASE WHEN li.return_date IS NOT NULL THEN 1 ELSE 0 END)
+        THEN 'Đã trả'
+        ELSE 'Chưa trả'
+      END AS status
+    FROM loan l
+    JOIN user u ON l.user_id = u.id
+    LEFT JOIN loan_item li ON l.id = li.loan_id
+    GROUP BY l.id
+    ORDER BY l.loan_date DESC
+  `;
+
+  sql.query(query, (err, res) => {
+    if (err) return result(err, null);
+    result(null, res);
+  });
+};
+
+Loan.getLoanWithItems = (loanId, result) => {
+  const query = `
+    SELECT 
+      l.id as loan_id,
+      l.loan_date,
+      u.username as user_name,
+      li.id as loan_item_id,
+      b.title,
+      b.author,
+      li.return_date
+    FROM loan l
+    JOIN user u ON l.user_id = u.id
+    JOIN loan_item li ON l.id = li.loan_id
+    JOIN book b ON li.book_id = b.id
+    WHERE l.id = ?
+  `;
+  sql.query(query, [loanId], (err, res) => {
+    if (err) return result(err, null);
+    if (!res.length) return result({ kind: "not_found" }, null);
+    result(null, res);
+  });
+};
 
 module.exports = Loan;

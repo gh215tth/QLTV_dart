@@ -1,19 +1,33 @@
-// screens/librarian/add_category_page.dart
+// screens/librarian/edit_category_page.dart
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
+import '../../../services/api_service.dart';
 
-class AddCategoryPage extends StatefulWidget {
-  const AddCategoryPage({super.key});
+class EditCategoryPage extends StatefulWidget {
+  final Map<String, dynamic> category;
+
+  const EditCategoryPage({super.key, required this.category});
 
   @override
-  State<AddCategoryPage> createState() => _AddCategoryPageState();
+  State<EditCategoryPage> createState() => _EditCategoryPageState();
 }
 
-class _AddCategoryPageState extends State<AddCategoryPage> {
+class _EditCategoryPageState extends State<EditCategoryPage> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
+  late TextEditingController _nameController;
   bool _isLoading = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.category['name']);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -24,9 +38,10 @@ class _AddCategoryPageState extends State<AddCategoryPage> {
     });
 
     try {
-      await ApiService.instance.createCategory({
-        'name': _nameController.text.trim(),
-      });
+      await ApiService.instance.updateCategory(
+        widget.category['id'] as int,
+        {'name': _nameController.text.trim()},
+      );
       if (!mounted) return;
       Navigator.pop(context, true);
     } catch (e) {
@@ -37,15 +52,9 @@ class _AddCategoryPageState extends State<AddCategoryPage> {
   }
 
   @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Thêm danh mục')),
+      appBar: AppBar(title: const Text('Chỉnh sửa danh mục')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -55,7 +64,7 @@ class _AddCategoryPageState extends State<AddCategoryPage> {
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: 'Tên danh mục'),
-                validator: (value) => value!.isEmpty ? 'Vui lòng nhập tên danh mục' : null,
+                validator: (value) => value!.isEmpty ? 'Không được để trống' : null,
               ),
               const SizedBox(height: 24),
               if (_error != null)
@@ -64,7 +73,7 @@ class _AddCategoryPageState extends State<AddCategoryPage> {
                   ? const CircularProgressIndicator()
                   : ElevatedButton(
                       onPressed: _submit,
-                      child: const Text('Thêm'),
+                      child: const Text('Lưu thay đổi'),
                     ),
             ],
           ),

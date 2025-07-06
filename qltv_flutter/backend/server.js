@@ -59,3 +59,30 @@ db.query("SELECT COUNT(*) as count FROM librarian", (err, result) => {
     console.log("⚠️ Created default librarian account: admin/admin123");
   }
 });
+
+const os = require('os');
+
+app.get('/host-ip', (req, res) => {
+  const interfaces = os.networkInterfaces();
+  const ipList = [];
+
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (
+        iface.family === 'IPv4' &&
+        !iface.internal 
+      ) {
+        ipList.push({
+          interface: name,
+          address: iface.address,
+        });
+      }
+    }
+  }
+
+  if (ipList.length > 0) {
+    res.json({ hostIps: ipList });
+  } else {
+    res.status(500).json({ error: 'Không tìm thấy địa chỉ IP mạng LAN nào.' });
+  }
+});

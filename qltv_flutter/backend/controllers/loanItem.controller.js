@@ -1,5 +1,7 @@
+// controllers/loanItem.controller.js
 const LoanItem = require('../models/loanItem.model.js');
-const sql = require('../config/db.js'); // để dùng cho promise query
+const Book = require('../models/book.model.js');
+const sql = require('../config/db.js');
 
 // Tạo mới một loan item
 exports.create = (req, res) => {
@@ -39,6 +41,12 @@ exports.create = (req, res) => {
         message: errorMessages[err.kind] || "Lỗi khi tạo chi tiết mượn."
       });
     }
+
+    Book.increaseTotalBorrowed(bookId, (err2, _) => {
+      if (err2) {
+        console.error("❌ Không thể tăng total_borrowed:", err2);
+      }
+    });
 
     res.status(201).send(data);
   });

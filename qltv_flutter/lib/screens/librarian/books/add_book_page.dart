@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
+import '../../../services/api_service.dart';
 
 class AddBookPage extends StatefulWidget {
-  const AddBookPage({super.key});
+  final int? initialCategoryId;
+
+  const AddBookPage({super.key, this.initialCategoryId});
 
   @override
   State<AddBookPage> createState() => _AddBookPageState();
@@ -12,6 +14,7 @@ class _AddBookPageState extends State<AddBookPage> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _authorController = TextEditingController();
+  final _quantityController = TextEditingController();
 
   int? _selectedCategoryId;
   bool _isLoading = false;
@@ -30,7 +33,7 @@ class _AddBookPageState extends State<AddBookPage> {
         setState(() {
           _categories = categories;
           if (_categories.isNotEmpty) {
-            _selectedCategoryId ??= _categories.first['id'];
+            _selectedCategoryId ??= widget.initialCategoryId ?? _categories.first['id'];
           }
         });
       }
@@ -54,23 +57,25 @@ class _AddBookPageState extends State<AddBookPage> {
     setState(() => _isLoading = true);
 
     try {
+      final quantity = int.tryParse(_quantityController.text.trim()) ?? 0;
+
       await ApiService.instance.createBook({
         'title': _titleController.text.trim(),
         'author': _authorController.text.trim(),
         'category_id': _selectedCategoryId,
-        'status': 0, // mặc định là "chưa mượn"
+        'quantity': quantity,
       });
 
       if (!mounted) return;
       Navigator.pop(context, true);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Thêm sách thành công')),
+        const SnackBar(content: Text('✅ Thêm sách thành công')),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi: $e')),
+        SnackBar(content: Text('❌ Lỗi: $e')),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -81,6 +86,7 @@ class _AddBookPageState extends State<AddBookPage> {
   void dispose() {
     _titleController.dispose();
     _authorController.dispose();
+    _quantityController.dispose();
     super.dispose();
   }
 
@@ -116,6 +122,17 @@ class _AddBookPageState extends State<AddBookPage> {
                         ))
                     .toList(),
                 onChanged: (value) => setState(() => _selectedCategoryId = value),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _quantityController,
+                decoration: const InputDecoration(labelText: 'Số lượng'),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  final qty = int.tryParse(value ?? '');
+                  if (qty == null || qty < 0) return 'Số lượng không hợp lệ';
+                  return null;
+                },
               ),
               const SizedBox(height: 24),
               _isLoading

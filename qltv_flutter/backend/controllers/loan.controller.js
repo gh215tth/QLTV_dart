@@ -40,6 +40,17 @@ exports.createLoanWithItem = async (req, res) => {
         return res.status(400).send({ message: messages[err.kind] || "Lỗi khi mượn sách." });
       }
 
+      // ✅ Cập nhật tổng số lượt mượn
+      try {
+        await sql.promise().query(
+          "UPDATE book SET total_borrowed = total_borrowed + 1 WHERE id = ?",
+          [book_id]
+        );
+      } catch (updateErr) {
+        console.error("Lỗi cập nhật total_borrowed:", updateErr);
+        // Không cần return vì loan đã tạo thành công, chỉ log lỗi
+      }
+
       res.status(201).send({
         message: "Tạo phiếu mượn và mượn sách thành công!",
         loan_id: loanId,
@@ -205,5 +216,40 @@ exports.returnBooks = (req, res) => {
         });
       }
     );
+  });
+};
+
+// Lấy tất cả phiếu mượn (cho thủ thư)
+exports.findAll = (req, res) => {
+  Loan.getAll((err, data) => {
+    if (err) {
+      return res.status(500).send({ message: err.message || "Không thể lấy danh sách phiếu mượn." });
+    }
+    res.send(data);
+  });
+};
+
+// Lấy chi tiết 1 phiếu mượn kèm danh sách sách mượn
+exports.getLoanWithItems = (req, res) => {
+  const loanId = req.params.id;
+
+  Loan.getLoanWithItems(loanId, (err, rows) => {
+    if (err) {
+      if (err.kind === "not_found") {
+        return res.status(404).send({ message: `Không tìm thấy phiếu mượn với id ${loanId}.` });
+      }
+      return res.status(500).send({ message: "Lỗi khi truy vấn chi tiết phiếu mượn." });
+    }
+
+    // Gom dữ liệu thành cấu trúc: { loan_id, loan_date, user_name, items: [...] }
+    const { loan_id, loan_date, user_name } = rows[0];
+    const items = rows.map(row => ({
+      loan_item_id: row.loan_item_id,
+      title: row.title,
+      author: row.author,
+      return_date: row.return_date
+    }));
+
+    res.send({ loan_id, loan_date, user_name, items });
   });
 };

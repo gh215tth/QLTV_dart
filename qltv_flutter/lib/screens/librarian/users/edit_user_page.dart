@@ -1,6 +1,6 @@
 // screens/librarian/edit_user_page.dart
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
+import '../../../services/api_service.dart';
 
 class EditUserPage extends StatefulWidget {
   final Map<String, dynamic> user;
@@ -14,15 +14,18 @@ class _EditUserPageState extends State<EditUserPage> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _usernameController;
   late TextEditingController _emailController;
-  String _role = 'user';
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+
   bool _isLoading = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void initState() {
     super.initState();
     _usernameController = TextEditingController(text: widget.user['username']);
     _emailController = TextEditingController(text: widget.user['email']);
-    _role = widget.user['role'] ?? 'user';
   }
 
   Future<void> _update() async {
@@ -31,28 +34,29 @@ class _EditUserPageState extends State<EditUserPage> {
     setState(() => _isLoading = true);
 
     try {
+      final updateData = {
+        'username': _usernameController.text.trim(),
+        'email': _emailController.text.trim(),
+      };
+
+      if (_passwordController.text.isNotEmpty) {
+        updateData['password'] = _passwordController.text.trim();
+      }
+
       await ApiService.instance.updateUser(
         widget.user['id'] as int,
-        {
-          'username': _usernameController.text.trim(),
-          'email': _emailController.text.trim(),
-          'role': _role,
-          // nếu backend không cho phép update password tại đây thì bỏ dòng dưới
-          'password': widget.user['password'],
-        },
+        updateData,
       );
 
       if (!mounted) return;
       Navigator.pop(context, true);
-
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Lỗi: $e')),
       );
-
     } finally {
-      if (!mounted) {
+      if (mounted) {
         setState(() => _isLoading = false);
       }
     }
@@ -66,7 +70,7 @@ class _EditUserPageState extends State<EditUserPage> {
         padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
-          child: Column(
+          child: ListView(
             children: [
               TextFormField(
                 controller: _usernameController,
@@ -79,19 +83,51 @@ class _EditUserPageState extends State<EditUserPage> {
                 decoration: const InputDecoration(labelText: 'Email'),
                 validator: (v) => v!.contains('@') ? null : 'Email không hợp lệ',
               ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                value: _role,
-                decoration: const InputDecoration(labelText: 'Vai trò'),
-                items: const [
-                  DropdownMenuItem(value: 'user', child: Text('Người dùng')),
-                  DropdownMenuItem(value: 'librarian', child: Text('Thủ thư')),
-                ],
-                onChanged: (v) => setState(() => _role = v!),
-              ),
               const SizedBox(height: 16),
+              TextFormField(
+                controller: _passwordController,
+                obscureText: _obscurePassword,
+                decoration: InputDecoration(
+                  labelText: 'Mật khẩu mới (nếu muốn đổi)',
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _confirmPasswordController,
+                obscureText: _obscureConfirmPassword,
+                decoration: InputDecoration(
+                  labelText: 'Xác nhận mật khẩu',
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscureConfirmPassword = !_obscureConfirmPassword;
+                      });
+                    },
+                  ),
+                ),
+                validator: (v) {
+                  if (_passwordController.text.isNotEmpty && v != _passwordController.text) {
+                    return 'Mật khẩu không khớp';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 24),
               _isLoading
-                  ? const CircularProgressIndicator()
+                  ? const Center(child: CircularProgressIndicator())
                   : SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(

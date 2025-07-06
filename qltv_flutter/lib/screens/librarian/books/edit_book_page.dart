@@ -1,6 +1,5 @@
-// screens/librarian/edit_book_page.dart
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
+import '../../../services/api_service.dart';
 
 class EditBookPage extends StatefulWidget {
   final Map<String, dynamic> book;
@@ -15,9 +14,9 @@ class _EditBookPageState extends State<EditBookPage> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _titleController;
   late final TextEditingController _authorController;
+  late final TextEditingController _quantityController;
 
   int? _selectedCategoryId;
-  int _selectedStatus = 0;
   bool _isLoading = false;
   String? _error;
   List<Map<String, dynamic>> _categories = [];
@@ -27,8 +26,9 @@ class _EditBookPageState extends State<EditBookPage> {
     super.initState();
     _titleController = TextEditingController(text: widget.book['title']);
     _authorController = TextEditingController(text: widget.book['author']);
+    _quantityController =
+        TextEditingController(text: widget.book['quantity'].toString());
     _selectedCategoryId = widget.book['category_id'];
-    _selectedStatus = widget.book['status'] ?? 0;
     _fetchCategories();
   }
 
@@ -57,11 +57,13 @@ class _EditBookPageState extends State<EditBookPage> {
     });
 
     try {
+      final quantity = int.tryParse(_quantityController.text.trim()) ?? 0;
+
       await ApiService.instance.updateBook(widget.book['id'], {
         'title': _titleController.text.trim(),
         'author': _authorController.text.trim(),
         'category_id': _selectedCategoryId,
-        'status': _selectedStatus,
+        'quantity': quantity,
       });
 
       if (!mounted) return;
@@ -78,6 +80,7 @@ class _EditBookPageState extends State<EditBookPage> {
   void dispose() {
     _titleController.dispose();
     _authorController.dispose();
+    _quantityController.dispose();
     super.dispose();
   }
 
@@ -94,7 +97,8 @@ class _EditBookPageState extends State<EditBookPage> {
               TextFormField(
                 controller: _titleController,
                 decoration: const InputDecoration(labelText: 'Tên sách'),
-                validator: (value) => value!.trim().isEmpty ? 'Vui lòng nhập tên sách' : null,
+                validator: (value) =>
+                    value!.trim().isEmpty ? 'Vui lòng nhập tên sách' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -111,17 +115,21 @@ class _EditBookPageState extends State<EditBookPage> {
                           child: Text(cat['name'] ?? ''),
                         ))
                     .toList(),
-                onChanged: (value) => setState(() => _selectedCategoryId = value),
+                onChanged: (value) =>
+                    setState(() => _selectedCategoryId = value),
               ),
               const SizedBox(height: 16),
-              DropdownButtonFormField<int>(
-                value: _selectedStatus,
-                decoration: const InputDecoration(labelText: 'Trạng thái'),
-                items: const [
-                  DropdownMenuItem(value: 0, child: Text('Còn sách')),
-                  DropdownMenuItem(value: 1, child: Text('Đã mượn')),
-                ],
-                onChanged: (value) => setState(() => _selectedStatus = value!),
+              TextFormField(
+                controller: _quantityController,
+                decoration: const InputDecoration(labelText: 'Số lượng còn lại'),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  final val = int.tryParse(value ?? '');
+                  if (val == null || val < 0) {
+                    return 'Số lượng không hợp lệ';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 24),
               if (_error != null)

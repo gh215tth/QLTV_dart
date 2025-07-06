@@ -1,7 +1,7 @@
-// screens/librarian/category_books_page.dart
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
+import '../../../services/api_service.dart';
 import 'edit_book_page.dart';
+import 'add_book_page.dart';
 
 class CategoryBooksPage extends StatefulWidget {
   final int categoryId;
@@ -57,6 +57,18 @@ class _CategoryBooksPageState extends State<CategoryBooksPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Lỗi khi xóa sách: $e')),
       );
+    }
+  }
+
+  Future<void> _navigateToAddBook() async {
+    final success = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddBookPage(initialCategoryId: widget.categoryId),
+      ),
+    );
+    if (success == true && mounted) {
+      setState(() => _loadBooks());
     }
   }
 
@@ -122,6 +134,11 @@ class _CategoryBooksPageState extends State<CategoryBooksPage> {
             },
           );
         },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _navigateToAddBook,
+        child: const Icon(Icons.add),
+        tooltip: 'Thêm sách mới',
       ),
     );
   }

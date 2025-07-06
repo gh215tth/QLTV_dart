@@ -6,8 +6,9 @@ const User = function(user) {
   this.username = user.username;
   this.email = user.email;
   this.password = user.password;
-  this.role = user.role || 'user'; // default
+  this.role = user.role === 'librarian' ? 'librarian' : 'user';
 };
+
 
 // Create a new User
 User.create = async (newUser, result) => {
@@ -122,29 +123,32 @@ User.getAll = result => {
 User.updateById = (id, user, result) => {
   const updateAndHash = async () => {
     try {
+      const fields = ['username = ?', 'email = ?'];
+      const values = [user.username, user.email];
+
       if (user.password) {
         const salt = await bcrypt.genSalt(10);
         user.password = await bcrypt.hash(user.password, salt);
+        fields.push('password = ?');
+        values.push(user.password);
       }
 
-      sql.query(
-        "UPDATE user SET username = ?, email = ?, password = ?, role = ? WHERE id = ?",
-        [user.username, user.email, user.password, user.role || 'user', id],
-        (err, res) => {
-          if (err) {
-            result(null, err);
-            return;
-          }
+      if (user.role) {
+        fields.push('role = ?');
+        values.push(user.role);
+      }
 
-          if (res.affectedRows === 0) {
-            result({ kind: "not_found" }, null);
-            return;
-          }
+      values.push(id); // for WHERE
 
-          const { password, ...userWithoutPassword } = user;
-          result(null, { id, ...userWithoutPassword });
-        }
-      );
+      const sqlStr = `UPDATE user SET ${fields.join(', ')} WHERE id = ?`;
+
+      sql.query(sqlStr, values, (err, res) => {
+        if (err) return result(null, err);
+        if (res.affectedRows === 0) return result({ kind: "not_found" }, null);
+
+        const { password, ...userWithoutPassword } = user;
+        result(null, { id, ...userWithoutPassword });
+      });
     } catch (err) {
       result(err, null);
     }

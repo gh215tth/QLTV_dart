@@ -1,5 +1,7 @@
+// login/login_screen.dart
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -89,10 +91,10 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 32),
             ToggleButtons(
               selectedColor: Colors.white, // Màu chữ khi chọn
-              color: Colors.blue,         // Màu chữ khi chưa chọn
-              fillColor: Colors.blue,      // ✅ Màu nền khi được chọn
-              borderColor: Colors.blue,    // ✅ Màu viền
-              selectedBorderColor: Colors.blue, // ✅ Màu viền khi được chọn
+              color: Colors.blue,          // Màu chữ khi chưa chọn
+              fillColor: Colors.blue,      // Màu nền khi được chọn
+              borderColor: Colors.blue,    // Màu viền
+              selectedBorderColor: Colors.blue, // Màu viền khi được chọn
               isSelected: [isUser, isLibrarian],
               onPressed: (index) {
                 setState(() {
@@ -176,6 +178,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: const TextStyle(color: Colors.red),
               ),
             ],
+            if (_selectedRole == 'user')
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                  );
+                },
+                child: const Text('Chưa có tài khoản? Đăng ký'),
+              ),
           ],
         ),
       ),

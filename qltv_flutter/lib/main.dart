@@ -3,10 +3,21 @@ import 'package:flutter/material.dart';
 import 'screens/login/login_screen.dart';
 import 'screens/librarian/librarian_home.dart' as librarian;
 import 'screens/user/user_home.dart';
+import 'services/api_service.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    await ApiService.instance.fetchAndSaveHostIP();
+    print('✅ Đã lưu IP backend thành công');
+  } catch (e) {
+    print('❌ Lỗi lấy IP backend: $e');
+  }
+
+  runApp(MyApp());
 }
+
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

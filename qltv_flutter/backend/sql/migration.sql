@@ -11,7 +11,7 @@ CREATE TABLE user (
   id INT AUTO_INCREMENT PRIMARY KEY,
   username VARCHAR(255) NOT NULL UNIQUE,
   email VARCHAR(255) NOT NULL UNIQUE,
-  password VARCHAR(255) NOT NULL
+  password VARCHAR(255) NOT NULL,
 );
 
 -- Tạo bảng thủ thư
@@ -49,3 +49,8 @@ CREATE TABLE loan_item (
   FOREIGN KEY (loan_id) REFERENCES loan(id) ON DELETE CASCADE,
   FOREIGN KEY (book_id) REFERENCES book(id)
 );
+
+ALTER TABLE user
+ADD COLUMN role ENUM('user', 'librarian') NOT NULL DEFAULT 'user';
+
+ALTER TABLE book ADD COLUMN total_borrowed INT DEFAULT 0;

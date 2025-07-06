@@ -12,7 +12,8 @@ exports.create = (req, res) => {
   const user = new User({
     username: req.body.username,
     email: req.body.email,
-    password: req.body.password
+    password: req.body.password,
+    role: 'user'
   });
 
   User.create(user, (err, data) => {
@@ -125,5 +126,36 @@ exports.getBorrowedBookIds = (req, res) => {
 
     const bookIds = results.map(row => row.book_id);
     res.json(bookIds);
+  });
+};
+
+// Lấy thông tin user hiện tại
+exports.getMe = (req, res) => {
+  console.log('[DEBUG] Token decoded user:', req.user);
+  const userId = req.user.id;
+  User.findById(userId, (err, user) => {
+    if (err) {
+      if (err.kind === "not_found") {
+        return res.status(404).json({ message: "Không tìm thấy người dùng." });
+      }
+      return res.status(500).json({ message: "Lỗi server khi lấy thông tin người dùng." });
+    }
+    res.json(user);
+  });
+};
+
+// Cập nhật thông tin user hiện tại
+exports.updateMe = (req, res) => {
+  const userId = req.user.id;
+  const updatedData = req.body;
+
+  User.updateById(userId, new User(updatedData), (err, data) => {
+    if (err) {
+      if (err.kind === "not_found") {
+        return res.status(404).json({ message: "Không tìm thấy người dùng." });
+      }
+      return res.status(500).json({ message: "Lỗi khi cập nhật thông tin người dùng." });
+    }
+    res.json(data);
   });
 };

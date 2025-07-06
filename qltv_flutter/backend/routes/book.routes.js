@@ -18,11 +18,15 @@
  *         quantity:
  *           type: integer
  *           description: "Số lượng còn lại của sách"
+ *         total_borrowed:
+ *           type: integer
+ *           description: "Tổng số lượt sách từng được mượn"
  *       example:
  *         title: "Clean Code"
  *         author: "Robert C. Martin"
  *         category_id: 1
- *         quantity: 5
+ *         quantity: 0
+ *         total_borrowed: 0
  *   securitySchemes:
  *     bearerAuth:
  *       type: http
@@ -193,6 +197,32 @@
  *         description: Không tìm thấy sách
  *       500:
  *         description: Lỗi hệ thống
+ * 
+ * /api/books/v1/top:
+ *   get:
+ *     summary: Lấy danh sách sách mượn nhiều nhất
+ *     tags: [Books]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         required: false
+ *         description: Số lượng sách cần lấy
+ *     responses:
+ *       200:
+ *         description: Danh sách sách mượn nhiều nhất
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Book'
+ *       500:
+ *         description: Lỗi hệ thống
  */
 
 module.exports = app => {
@@ -202,6 +232,7 @@ module.exports = app => {
 
   app.post("/api/books/v1", verifyToken, role.isLibrarian, ctrl.create);
   app.get("/api/books/v1", verifyToken, role.isUserOrLibrarian, ctrl.findAll);
+  app.get("/api/books/v1/top", verifyToken, role.isUserOrLibrarian, ctrl.getTopBorrowed);
   app.get("/api/books/v1/:id", verifyToken, role.isUserOrLibrarian, ctrl.findOne);
   app.put("/api/books/v1/:id", verifyToken, role.isLibrarian, ctrl.update);
   app.delete("/api/books/v1/:id", verifyToken, role.isLibrarian, ctrl.delete);
