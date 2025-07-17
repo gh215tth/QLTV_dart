@@ -1,0 +1,40 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36" version="28.0.3">
+  <diagram name="Class Diagram" id="library-class-diagram">
+    <mxGraphModel dx="1188" dy="619" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="user" value="User - id - username - email - password - role" style="shape=swimlane;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="60" y="40" width="160" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="librarian" value="Librarian - id - username - email - password" style="shape=swimlane;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="650" y="40" width="160" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="category" value="Category - id - name" style="shape=swimlane;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="300" y="40" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="book" value="Book - id - title - author - category_id - quantity - total_borrowed" style="shape=swimlane;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="370" y="140" width="200" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="loan" value="Loan - id - user_id - loan_date" style="shape=swimlane;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="90" y="370" width="160" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="loan_item" value="LoanItem - id - loan_id - book_id - return_date" style="shape=swimlane;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="360" y="300" width="180" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="rel1" style="endArrow=block;html=1;" parent="1" source="book" target="category" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel2" style="endArrow=block;html=1;" parent="1" source="loan" target="user" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel3" style="endArrow=block;html=1;" parent="1" source="loan_item" target="loan" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel4" style="endArrow=block;html=1;" parent="1" source="loan_item" target="book" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

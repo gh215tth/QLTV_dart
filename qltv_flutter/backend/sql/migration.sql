@@ -22,7 +22,7 @@ CREATE TABLE librarian (
   password VARCHAR(255) NOT NULL
 );
 
--- Tạo bảng sách (đã sửa: quantity thay cho status)
+-- Tạo bảng sách
 CREATE TABLE book (
   id INT AUTO_INCREMENT PRIMARY KEY,
   title VARCHAR(255) NOT NULL,
